@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang = "en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Data Explorer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+ body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+    }
+
+    .panel {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Saved queries */
+    .query-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .chip {
+      padding: 0.4rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid #2d3148;
+      background: #252836;
+      color: #94a3b8;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover  { border-color: #6366f1; color: #c7d2fe; }
+    .chip.active { border-color: #6366f1; background: #312e81; color: #e0e7ff; }
+
+    /* SQL textarea */
+    #sql-input {
+      width: 100%;
+      min-height: 120px;
+      padding: 0.85rem 1rem;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #sql-input:focus { border-color: #6366f1; }
+
+    /* Run button */
+    #run-btn {
+      margin-top: 1rem;
+      padding: 0.6rem 1.5rem;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    #run-btn:hover    { background: #4f46e5; }
+    #run-btn:disabled { background: #374151; cursor: not-allowed; }
+
+    /* Status bar */
+    #status-bar {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 0.75rem;
+      min-height: 1.2em;
+    }
+    #status-bar.error { color: #f87171; }
+    #status-bar.ok    { color: #34d399; }
+
+    /* Results */
+    #results-panel { display: none; }
+
+    .results-meta {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 1.5rem;
+    }
+    .results-meta span b { color: #94a3b8; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #2d3148;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    thead th {
+      padding: 0.65rem 1rem;
+      text-align: left;
+      background: #252836;
+      color: #94a3b8;
+      font-weight: 500;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid #2d3148;
+      white-space: nowrap;
+    }
+
+    tbody tr { transition: background 0.1s; }
+    tbody tr:hover { background: #1f2235; }
+
+    tbody td {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid #1e2133;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid #fff3;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+  </style>
+</head>
+
+<body>
+  {% csrf_token %}
+    <h1>Data Explorer </h1>
+    <div class = "panel">
+        <label>
+        Saved Queries
+        </label>
+        <div  class='query-chips'>
+            {% for key , sql in SAVED_QUERIES.items %}
+            <button class ="chip" data-key ="{{key}}" data-sql = "{{ sql }} " >
+                {{ key|title|cut:"_" }}
+            </button>
+            {% endfor %}
+            <button class="chip" data-key="__custom__">Custom SQL</button>
+        </div>
+        <label for = "sql-input" > SQL </label>
+        <textarea id="sql-input" placeholder="SELECT * from paycheck_protection_program LIMIT 10"></textarea>
+        <button id="run-btn">
+            <div class="spinner" id="spinner"> </div>
+                Run Query
+        </button>
+        <div id="status-bar"></div>
+
+    </div>
+
+    <!--results-->
+    <div class="panel" id="results-panel">
+        <div class="results-meta" id="results-meta"></div>
+        <div class="table-wrap">
+            <table id="results-table">
+                <thead id="results-head"></thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+      const chips = document.querySelectorAll('.chip');
+      const sqlInput = document.getElementById('sql-input');
+      const runBtn = document.getElementById('run-btn');
+      const spinner = document.getElementById('spinner');
+      const statusBar= document.getElementById('status-bar');
+      const resultsPanel= document.getElementById('results-panel');
+      let selectedKey = null;
+
+      chips.forEach(chip =>{
+        chip.addEventListener('click', () => {
+          chips.forEach(c => c.classList.remove('active'));
+          chip.classList.add('active'); 
+          selectedKey = chip.dataset.key;
+          if(selectedKey!== '__custom__'){
+            sqlInput.value = chip.dataset.sqlInput;
+          }
+          else{
+            sqlInput.value = '';
+            sqlInput.focus();
+          }
+        });
+      });
+
+      runBtn.addEventListener ('click', async() => {
+        const sql = sqlInput.value.trim();
+        if(!sql){
+          setStatus('Enter an SQL query first' , 'error'); 
+          return;
+        }
+        setLoading(true);
+        setStatus('running query on athena');
+        resultsPanel.style.display = 'none'; 
+        try{
+        const res = await fetch("{% url 'run_query' %}",{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json', 
+            'X-CSRFToken': getCookie('csrftoken'),
+          },
+          body: JSON.stringify({
+            query_key: (selectedKey && selectedKey !== '__custom__') ? selectedKey: '',
+            custom_sql: sql,
+          }),
+        });
+        const data = await res.json();
+        renderResults(data);
+        setStatus(`Done - ${data.row_count} rows * ${data.scanned_mb} MB scanned * ${data.duration_ms}`, 'ok');
+      }
+      catch(err){
+        setStatus(err.messsage, 'error')
+      }
+      finally{
+        setLoading(false);
+      }
+      });
+
+    function formatValue(val){
+      if (val === null || val === undefined || val === '') return '';
+      const num = Number(val);
+      if(!isNaN(num) && val !== ''){
+        if(Math.abs(num) >= 1000){
+          return num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        }
+      }
+      return val;
+    }
+
+     function renderResults({headers, rows}){
+      document.getElementById('results-head').innerHTML =
+        '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+      //Rows
+      document.getElementById('results-body').innerHTML = rows.length ? rows.map(row =>
+        '<tr>' + headers.map(h => `<td>${formatValue(row[h])}</td>` ).join('') + '</tr>').join(''): `<tr><td colspan="${headers.length}" style="padding:1rem;color:#64748b;text-align:center">No results</td></tr>`;
+        resultsPanel.style.display = 'block';
+
+      document.getElementById('results-panel').style.display='block'; 
+     }
+
+     function setStatus(msg, type = ''){
+      statusBar.textContent = msg;
+      statusBar.className = type; 
+
+     }
+
+     function setLoading(on){
+      runBtn.ariaDisabled = on;
+      spinner.style.display = on ? 'block' : 'none' ;
+
+     }
+     function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+     document.getElementById('run-btn').addEventListener('click', async function(){
+      console.log('button clicked');
+      console.log('SQL value; ', document.getElementById('sql-input').value);
+      try{
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const res = await fetch("/frontend/run/", {
+          method: 'POST',
+          headers:{
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+          },
+          body: JSON.stringify({custom_sql: 'SELECT 1'}),
+        });
+        console.log('Response Status:', res.status);
+        const data = await res.json();
+        console.log('Response data:', data);
+      }catch(err){
+        console.log('Fetch error:', err);
+      }
+     });
+    </script>
+</body>
+</html>

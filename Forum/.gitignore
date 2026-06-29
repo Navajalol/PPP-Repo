@@ -1,0 +1,18 @@
+# Environment and secrets
+.env
+*.pem
+*.ppk
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+staticfiles/
+db.sqlite3
+
+# Windows
+Thumbs.db
+desktop.ini
