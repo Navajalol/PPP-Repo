@@ -42,25 +42,34 @@
     }
 
     /* Saved queries */
-    .query-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-    }
+  .query-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
 
-    .chip {
-      padding: 0.4rem 0.85rem;
-      border-radius: 999px;
-      border: 1px solid #2d3148;
-      background: #252836;
-      color: #94a3b8;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .chip:hover  { border-color: #6366f1; color: #c7d2fe; }
-    .chip.active { border-color: #6366f1; background: #312e81; color: #e0e7ff; }
+.chip {
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid #2d3148;
+    background: #252836;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.chip:hover {
+    border-color: #6366f1;
+    color: #c7d2fe;
+}
+
+.chip.active {
+    border-color: #6366f1;
+    background: #312e81;
+    color: #e0e7ff;
+}
 
     /* SQL textarea */
     #sql-input {
@@ -179,8 +188,8 @@
         Saved Queries
         </label>
         <div  class='query-chips'>
-            {% for key , sql in SAVED_QUERIES.items %}
-            <button class ="chip" data-key ="{{key}}" data-sql = "{{ sql }} " >
+            {% for key , sql in saved_queries.items %}
+            <button class ="chip" data-key ="{{key}}">
                 {{ key|title|cut:"_" }}
             </button>
             {% endfor %}
@@ -207,6 +216,7 @@
         </div>
     </div>
     <script>
+      var SAVED_QUERIES = JSON.parse('{{ saved_queries_json|escapejs }}');
       const chips = document.querySelectorAll('.chip');
       const sqlInput = document.getElementById('sql-input');
       const runBtn = document.getElementById('run-btn');
@@ -220,12 +230,15 @@
           chips.forEach(c => c.classList.remove('active'));
           chip.classList.add('active'); 
           selectedKey = chip.dataset.key;
-          if(selectedKey!== '__custom__'){
-            sqlInput.value = chip.dataset.sqlInput;
+          if(selectedKey === '__custom__'){
+            sqlInput.value = '';
+            sqlInput.removeAttribute('readonly')
+            sqlInput.focus();
           }
           else{
-            sqlInput.value = '';
-            sqlInput.focus();
+            sqlInput.removeAttribute('readonly');
+            sqlInput.value = SAVED_QUERIES[selectedKey] || '';
+            sqlInput.setAttribute('readonly', true);
           }
         });
       });
@@ -256,7 +269,7 @@
         setStatus(`Done - ${data.row_count} rows * ${data.scanned_mb} MB scanned * ${data.duration_ms}`, 'ok');
       }
       catch(err){
-        setStatus(err.messsage, 'error')
+        setStatus(err.message, 'error')
       }
       finally{
         setLoading(false);
@@ -296,7 +309,7 @@
      }
 
      function setLoading(on){
-      runBtn.ariaDisabled = on;
+      runBtn.disabled = on;
       spinner.style.display = on ? 'block' : 'none' ;
 
      }
@@ -314,26 +327,7 @@
     }
     return cookieValue;
 }
-     document.getElementById('run-btn').addEventListener('click', async function(){
-      console.log('button clicked');
-      console.log('SQL value; ', document.getElementById('sql-input').value);
-      try{
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        const res = await fetch("/frontend/run/", {
-          method: 'POST',
-          headers:{
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-          },
-          body: JSON.stringify({custom_sql: 'SELECT 1'}),
-        });
-        console.log('Response Status:', res.status);
-        const data = await res.json();
-        console.log('Response data:', data);
-      }catch(err){
-        console.log('Fetch error:', err);
-      }
-     });
+     
     </script>
 </body>
 </html>

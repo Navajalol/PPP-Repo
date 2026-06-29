@@ -13,43 +13,18 @@ ATHENA_DATABASE = 'ppp_data'
 ATHENA_OUTPUT = 's3://aws-s3-study-case/Paycheck-protection-program/Query-Results/'
 AWS_REGION = 'us-east-1'
 SAVED_QUERIES = {
-    'loans_by_state' : """SELECT ProjectState,
-        COUNT(*) AS total_loans,
-        SUM(InitialApprovalAmount) AS total_approved,
-        SUM(ForgivenessAmount) AS total_forgiven
-        FROM paycheck_protection_program
-        GROUP BY ProjectState
-        ORDER BY total_approved DESC
-        LIMIT 20""",
+    'loans_by_state' : """SELECT ProjectState, COUNT(*) AS total_loans, SUM(InitialApprovalAmount) AS total_approved, SUM(ForgivenessAmount) AS total_forgiven FROM paycheck_protection_program GROUP BY ProjectState ORDER BY total_approved DESC LIMIT 20""",
 
-    'jobs_by_business_type': """
-        SELECT BusinessType,
-        COUNT(*) AS total_loans,
-        SUM(JobsReported) AS total_jobs,
-        AVG(InitialApprovalAmount) AS avg_loan_amount
-        FROM paycheck_protection_program
-        GROUP BY BusinessType
-        ORDER BY total_jobs DESC
-        LIMIT 20
-    """,
+    'jobs_by_business_type': """ SELECT BusinessType, COUNT(*) AS total_loans, SUM(JobsReported) AS total_jobs, AVG(InitialApprovalAmount) AS avg_loan_amount FROM paycheck_protection_program GROUP BY BusinessType ORDER BY total_jobs DESC LIMIT 20""",
 
-    'forgiveness_by_lender': """
-        SELECT ServicingLenderName,
-        COUNT(*) AS total_loans,
-        SUM(InitialApprovalAmount) AS total_approved,
-        SUM(ForgivenessAmount) AS total_forgiven,
-        ROUND(SUM(ForgivenessAmount) / NULLIF(SUM(InitialApprovalAmount), 0) * 100, 2) AS forgiveness_rate_pct
-        FROM paycheck_protection_program
-        GROUP BY ServicingLenderName
-        ORDER BY total_approved DESC
-        LIMIT 20
-    """,
+    'forgiveness_by_lender': """SELECT ServicingLenderName, COUNT(*) AS total_loans, SUM(InitialApprovalAmount) AS total_approved, SUM(ForgivenessAmount) AS total_forgiven, ROUND(SUM(ForgivenessAmount) / NULLIF(SUM(InitialApprovalAmount), 0) * 100, 2) AS forgiveness_rate_pct FROM paycheck_protection_program GROUP BY ServicingLenderName ORDER BY total_approved DESC LIMIT 20 """,
 }
 
 def frontend(request):
   
-  return render(request, 'templates/query.html', {
+  return render(request, 'query.html', {
                 'saved_queries' : SAVED_QUERIES,
+                'saved_queries_json': json.dumps(SAVED_QUERIES),
                 })
 def athenaQuery(sql: str) -> dict:
   client = boto3.client('athena', region_name=AWS_REGION)
@@ -125,9 +100,7 @@ def run_query(request):
     traceback.print_exc()
     return JsonResponse({'error': str(e)}, status=500)
 
-def frontend(request):
-  template = loader.get_template('query.html')
-  return HttpResponse(template.render())
+
 
 
 
