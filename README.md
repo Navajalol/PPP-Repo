@@ -1,6 +1,8 @@
 # PPP-Repo
 # Architechture diagram
 <img width="233" height="1001" alt="PPP-diagram drawio" src="https://github.com/user-attachments/assets/bfe11378-3b09-4801-9a27-03ff44e31740" />
+
+
 # AWS Services used and why
 * EC2: Used to deploy the application. It was chosen as it is the Cheapest option with its free tier. Also since it there is not going to be a big amount of users joining I am able to use EC2 without throttling or having to scale it up
 * S3: Cheap storage for all the PPP-loan CSVs. It also has easy integration with Athena so I can query information from S3 easily, cheap, and quick.
